@@ -49,6 +49,11 @@ MODEL=facebook/opt-13b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 bash mezo.sh
 MODEL=facebook/opt-13b TASK=SST2 MODE=prefix LR=1e-3 EPS=1e-1 bash mezo.sh
 MODEL=facebook/opt-13b TASK=SST2 MODE=lora LR=5e-5 EPS=1e-2 bash mezo.sh
 
+# MeZO (full-param pythia model)
+MODEL=EleutherAI/pythia-1.4b-deduped TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 bash mezo.sh
+
+CUDA_VISIBLE_DEVICES=0 MODEL=EleutherAI/pythia-1.4b-deduped TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 SEED=0 bash mezo.sh
+
 # MeZO with non-differentiable objective (SQuAD (F1) + MeZO prefix as an example)
 MODEL=facebook/opt-13b TASK=SQuAD MODE=prefix LR=1e-2 EPS=1e-1 bash mezo.sh --non_diff --evaluation_strategy no --save_strategy no --save_model
 ```

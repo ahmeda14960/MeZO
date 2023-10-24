@@ -21,6 +21,7 @@ from torch.utils.data import Dataset
 from torch.distributed.fsdp.fully_sharded_data_parallel import FullyShardedDataParallel as FSDP
 from metrics import calculate_metric
 from utils import *
+from pythia import GPTNeoXForCausalLM
 from trainer import OurTrainer
 import random
 
@@ -158,22 +159,37 @@ class Framework:
                     torch_dtype = torch.float16
                 elif self.args.load_bfloat16:
                     torch_dtype = torch.bfloat16
-                model = AutoModelForCausalLM.from_pretrained(
-                    self.args.model_name,
-                    config=config,
-                    device_map='auto',
-                    torch_dtype=torch_dtype,
-                    max_memory={i: f'{free_in_GB-5}GB' for i in range(torch.cuda.device_count())},
-                    load_in_8bit=self.args.load_int8,
-                )
+                if 'pythia' in self.args.model_name:
+                    model = GPTNeoXForCausalLM.from_pretrained(
+                        self.args.model_name,
+                        device_map='auto',
+                        torch_dtype=torch_dtype,
+                        max_memory={i: f'{free_in_GB-5}GB' for i in range(torch.cuda.device_count())},
+                        load_in_8bit=self.args.load_int8,
+                    )
+                else:
+                    model = AutoModelForCausalLM.from_pretrained(
+                        self.args.model_name,
+                        config=config,
+                        device_map='auto',
+                        torch_dtype=torch_dtype,
+                        max_memory={i: f'{free_in_GB-5}GB' for i in range(torch.cuda.device_count())},
+                        load_in_8bit=self.args.load_int8,
+                    )
             model.eval()
 
         # Load tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(self.args.model_name, use_fast=False)
+        if 'pythia' in self.args.model_name:
+            from transformers import GPTNeoXTokenizerFast
+            tokenizer = GPTNeoXTokenizerFast.from_pretrained(self.args.model_name)
+        else:
+            tokenizer = AutoTokenizer.from_pretrained(self.args.model_name, use_fast=False)
 
         # HF tokenizer bug fix
         if "opt" in self.args.model_name:
             tokenizer.bos_token_id = 0
+        elif "pythia" in self.args.model_name:
+            tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
         # Prefix tuning/LoRA
         if self.args.prefix_tuning:
